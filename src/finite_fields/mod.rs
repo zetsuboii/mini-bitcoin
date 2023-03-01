@@ -1,7 +1,7 @@
 #![allow(unused)]
 
-mod modulo;
-mod pow;
+pub mod modulo;
+pub mod pow;
 
 use primitive_types::U256;
 use std::{
