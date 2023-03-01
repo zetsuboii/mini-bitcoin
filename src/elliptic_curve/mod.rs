@@ -1,6 +1,6 @@
 #![allow(unused)]
 
-use color_eyre::eyre::{ Result, eyre };
+use color_eyre::eyre::{eyre, Result};
 
 use crate::finite_fields::{pow::Pow, Felt};
 
@@ -38,25 +38,28 @@ impl Point {
 
 #[cfg(test)]
 mod tests {
+    use crate::finite_fields::macros::felt;
     use primitive_types::U256;
+
     use super::*;
 
     #[test]
     fn test_curve() {
-        let prime = U256::from(103);
+        let prime = 103u64;
+
         let point = Point::try_new(
-            Felt::new(U256::from(17), prime), 
-            Felt::new(U256::from(64), prime), 
-            Felt::new(U256::from(0), prime), 
-            Felt::new(U256::from(7), prime), 
+            felt!(17, prime),
+            felt!(64, prime),
+            felt!(0, prime),
+            felt!(7, prime),
         );
         assert!(point.is_ok());
 
         let point = Point::try_new(
-            Felt::new(U256::from(17), prime), 
-            Felt::new(U256::from(64), prime), 
-            Felt::new(U256::from(0), prime), 
-            Felt::new(U256::from(9), prime), 
+            felt!(17, prime),
+            felt!(64, prime),
+            felt!(0, prime),
+            felt!(9, prime),
         );
         assert!(point.is_err());
     }

@@ -2,6 +2,7 @@
 
 pub mod modulo;
 pub mod pow;
+pub mod macros;
 
 use primitive_types::U256;
 use std::{
@@ -10,6 +11,7 @@ use std::{
 };
 
 use self::{modulo::Modulo, pow::Pow};
+use macros::felt;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Felt {
@@ -122,37 +124,37 @@ mod tests {
 
     #[test]
     fn test_display() {
-        let felt_a = Felt::new(U256::from(1), U256::from(11));
+        let felt_a = felt!(1, 11);
         assert_eq!(format!("{}", felt_a), "Field Element: 1 (11)")
     }
 
     #[test]
     fn test_add_sub() {
-        let felt_a = Felt::new(11.into(), 19.into());
-        let felt_b = Felt::new(17.into(), 19.into());
+        let felt_a = felt!(11, 19);
+        let felt_b = felt!(17, 19);
         assert_eq!(felt_a + felt_b, Felt::new(9.into(), 19.into()));
 
-        let felt_a = Felt::new(6.into(), 19.into());
-        let felt_b = Felt::new(13.into(), 19.into());
+        let felt_a = felt!(6, 19);
+        let felt_b = felt!(13, 19);
         assert_eq!(felt_a - felt_b, Felt::new(12.into(), 19.into()));
     }
 
     #[test]
     fn test_mul_div() {
-        let felt_a = Felt::new(2.into(), 19.into());
-        let felt_b = Felt::new(17.into(), 19.into());
+        let felt_a = felt!(2, 19);
+        let felt_b = felt!(17, 19);
         assert_eq!(felt_a * felt_b, Felt::new(15.into(), 19.into()));
 
-        let felt_a = Felt::new(2.into(), 19.into());
-        let felt_b = Felt::new(7.into(), 19.into());
+        let felt_a = felt!(2, 19);
+        let felt_b = felt!(7, 19);
         assert_eq!(felt_a / felt_b, Felt::new(3.into(), 19.into()));
     }
 
     #[test]
     fn test_pow() {
         // 3^-1 == 1/3
-        let felt_a = Felt::new(3.into(), 19.into()).pow(-1i64);
-        let felt_b = Felt::new(1.into(), 19.into()).div(Felt::new(3.into(), 19.into()));
+        let felt_a = felt!(3, 19).pow(-1i64);
+        let felt_b = felt!(1, 19) / felt!(3, 19);
         assert_eq!(felt_a, felt_b);
     }
 }
