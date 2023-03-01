@@ -12,7 +12,7 @@ use std::{
 use self::{modulo::Modulo, pow::Pow};
 
 #[derive(Debug, Default, Clone, Copy)]
-struct Felt {
+pub struct Felt {
     inner: U256,
     prime: U256,
 }
