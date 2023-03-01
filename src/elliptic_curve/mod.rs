@@ -4,6 +4,21 @@ use color_eyre::eyre::{eyre, Result};
 
 use crate::finite_fields::{pow::Pow, Felt};
 
+struct Curve {
+    a: Felt,
+    b: Felt,
+}
+
+impl Curve {
+    pub fn new(a: Felt, b: Felt) -> Self {
+        Self { a, b }
+    }
+
+    pub fn point(&self, x: Felt, y: Felt) -> Result<Point> {
+        Point::try_new(x, y, self.a, self.b)
+    }
+}
+
 struct Point {
     x: Felt,
     y: Felt,
@@ -12,7 +27,8 @@ struct Point {
 }
 
 impl Point {
-    fn is_on_curve(&self) -> bool {
+    /// Checks if the point is on the curve
+    pub fn is_on_curve(&self) -> bool {
         let left = self.y.pow(2u32);
         let right = self.x.pow(3u32) + self.a * self.x + self.b;
 
@@ -45,22 +61,20 @@ mod tests {
 
     #[test]
     fn test_curve() {
-        let prime = 103u64;
+        let prime = 223u64;
+        let curve = Curve::new(felt!(0, prime), felt!(7, prime));
 
-        let point = Point::try_new(
-            felt!(17, prime),
-            felt!(64, prime),
-            felt!(0, prime),
-            felt!(7, prime),
-        );
-        assert!(point.is_ok());
+        let valid_points = vec![(192, 105), (17, 56), (1, 193)];
+        let invalid_points = vec![(200, 119), (42, 99)];
 
-        let point = Point::try_new(
-            felt!(17, prime),
-            felt!(64, prime),
-            felt!(0, prime),
-            felt!(9, prime),
-        );
-        assert!(point.is_err());
+        for (x, y) in valid_points {
+            let point = curve.point(felt!(x, prime), felt!(y, prime));
+            assert!(point.is_ok());
+        }
+
+        for (x, y) in invalid_points {
+            let point = curve.point(felt!(x, prime), felt!(y, prime));
+            assert!(point.is_err());
+        }
     }
 }
