@@ -73,7 +73,7 @@ impl Sub for Felt {
             &self.prime - (rhs.inner - self.inner)
         };
 
-        Self::new(result, self.prime.clone())
+        Self::new(result.modulo(&self.prime), self.prime.clone())
     }
 }
 

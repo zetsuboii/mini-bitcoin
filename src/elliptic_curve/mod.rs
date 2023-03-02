@@ -4,7 +4,7 @@ use std::ops::{Add, Mul};
 
 use color_eyre::eyre::{eyre, Result};
 
-use crate::finite_fields::{macros::felt, Felt, pow::Pow};
+use crate::finite_fields::{macros::felt, pow::Pow, Felt};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Curve {
@@ -100,8 +100,8 @@ impl Add for Point {
                     let y1 = self.y.unwrap();
                     let y2 = rhs.y.unwrap();
 
-                    if x1 == x2 && y1 == y2 {
-                        // Case 1: self.x == rhs.x && self.y == rhs.y; return Infinity
+                    if x1 == x2 && y1 != y2 {
+                        // Case 1: self.x == rhs.x && self.y != rhs.y; return Infinity
                         Self::new(PointType::Infinity, PointType::Infinity, self.a, self.b)
                     } else if x1 != x2 {
                         // Case 2: self.x != rhs.x
@@ -150,11 +150,18 @@ impl Mul<u32> for Point {
     type Output = Self;
 
     fn mul(self, rhs: u32) -> Self::Output {
-        let mut result = self.clone();
+        let mut product = Point::new(
+            PointType::Infinity,
+            PointType::Infinity,
+            self.a.clone(),
+            self.b.clone(),
+        );
+
         for _ in 0..rhs {
-            result = result + self.clone();
+            product = product + self.clone();
         }
-        result
+
+        product
     }
 }
 
