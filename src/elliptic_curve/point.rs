@@ -79,6 +79,16 @@ impl Point {
         }
     }
 
+    pub fn naive_mul(&self, coefficient: u32) -> Self {
+        let mut product = Point::new(PointType::Infinity, PointType::Infinity, self.curve.clone());
+
+        for _ in 0..coefficient {
+            product = product + self.clone();
+        }
+
+        product
+    }
+
     pub fn binary_expansion_mul(&self, coefficient: u32) -> Self {
         let mut coefficient = coefficient;
         let mut current = self.clone();
@@ -163,12 +173,6 @@ impl Mul<u32> for Point {
 
     #[allow(clippy::suspicious_arithmetic_impl)]
     fn mul(self, rhs: u32) -> Self::Output {
-        let mut product = Point::new(PointType::Infinity, PointType::Infinity, self.curve.clone());
-
-        for _ in 0..rhs {
-            product = product + self.clone();
-        }
-
-        product
+        self.binary_expansion_mul(rhs)
     }
 }

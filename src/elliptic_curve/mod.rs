@@ -100,10 +100,10 @@ mod tests {
 
         for i in 0..10 {
             let coefficient = (i + 1) as u32;
-            let multiple = generator.clone() * coefficient;
+            let naive_multiple = generator.clone().naive_mul(coefficient);
             let binary_expanded = generator.clone().binary_expansion_mul(coefficient);
 
-            assert_eq!(multiple, binary_expanded);
+            assert_eq!(naive_multiple, binary_expanded);
         }
     }
 }
