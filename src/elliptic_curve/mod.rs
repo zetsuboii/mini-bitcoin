@@ -22,10 +22,19 @@ impl Curve {
     pub fn point(&self, x: Felt, y: Felt) -> Result<Point> {
         Point::try_from_felts(x, y, self.a.clone(), self.b.clone())
     }
+
+    pub fn identity(&self) -> Point {
+        Point::new(
+            PointType::Infinity,
+            PointType::Infinity,
+            PointType::Normal(self.a.clone()),
+            PointType::Normal(self.b.clone()),
+        )
+    }
 }
 
 /// Represents type of a point on an elliptic curve
-/// 
+///
 /// Can be either a normal point or infinity
 #[derive(Debug, Clone, PartialEq)]
 pub enum PointType {
@@ -54,17 +63,22 @@ pub struct Point {
 impl Point {
     /// Checks if the point is on the curve
     pub fn is_on_curve(&self) -> bool {
-        let cloned = self.clone();
-        let a = cloned.a.unwrap();
-        let b = cloned.b.unwrap();
-        let x = cloned.x.unwrap();
-        let y = cloned.y.unwrap();
+        match (&self.x, &self.y) {
+            (PointType::Infinity, PointType::Infinity) => true,
+            (PointType::Infinity, _) | (_, PointType::Infinity) => false,
+            (PointType::Normal(x), PointType::Normal(y)) => {
+                let a = self.a.clone().unwrap();
+                let b = self.b.clone().unwrap();
 
-        let left = y.pow(2u32);
-        let right = x.pow(3u32) + a * x + b;
+                let left = y.pow(2u32);
+                let right = x.pow(3u32) + a * x + b;
 
-        left == right
+                left == right
+            },
+        }
     }
+
+
 
     /// Creates a new point from point types
     pub fn new(x: PointType, y: PointType, a: PointType, b: PointType) -> Self {
@@ -108,6 +122,10 @@ impl Add for Point {
 
     /// Performs point addition on two points on an elliptic curve
     /// <https://en.wikipedia.org/wiki/Elliptic_curve_point_multiplication#Point_addition>
+    ///
+    /// In a high level, given points P1(x1,y1) and P2(x2,y2) on an elliptic curve, adding P1 and P2
+    /// means drawing a line through P1 and P2 and finding the point where the line intersects the
+    /// curve and taking its reflection across the x-axis.
     #[allow(clippy::erasing_op)]
     fn add(self, rhs: Self) -> Self::Output {
         match &self.x {
@@ -118,6 +136,7 @@ impl Add for Point {
 
                     if x1 == x2 && y1 != y2 {
                         // Case 1: self.x == rhs.x && self.y != rhs.y; return Infinity
+                        // If we are on the same x but different y, we are tangent to the vertical line
                         Self::new(PointType::Infinity, PointType::Infinity, self.a, self.b)
                     } else if x1 != x2 {
                         // Case 2: self.x != rhs.x
@@ -154,10 +173,12 @@ impl Add for Point {
                     }
                 }
                 // Case 0.1: rhs points to Infinity, return self
+                // This is the identity element for addition
                 PointType::Infinity => self,
             },
             // Case 0.0: self points to Infinity, return rhs
-            PointType::Infinity => rhs
+            // This is the identity element for addition
+            PointType::Infinity => rhs,
         }
     }
 }

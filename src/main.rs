@@ -1,38 +1,27 @@
 #![warn(clippy::all, clippy::pedantic, clippy::style, rust_2018_idioms)]
 
-mod finite_fields;
 mod elliptic_curve;
+mod finite_fields;
 
-use elliptic_curve::PointType;
-
-use crate::{finite_fields::macros::felt, elliptic_curve::Point};
-
-fn fmt_point(pt: &Point) -> String {
-    let x_repr = match pt.x.clone() {
-        PointType::Infinity => String::from("INF"),
-        PointType::Normal(x) => format!("{}", x.inner()),
-    };
-
-    let y_repr = match pt.y.clone() {
-        PointType::Infinity => String::from("INF"),
-        PointType::Normal(y) => format!("{}", y.inner()),
-    };
-
-    format!("({}, {})", x_repr, y_repr)
-}
+use crate::{elliptic_curve::Curve, finite_fields::macros::felt};
 
 fn main() {
     let prime: u64 = 223;
     let a = felt!(0, prime);
     let b = felt!(7, prime);
-    let x = felt!(47, prime);
-    let y = felt!(71, prime);
-    let pt = Point::try_from_felts(x, y, a, b).expect("Point is not on the curve");
+    let curve = Curve::new(a.clone(), b.clone());
 
-    for s in 1..21u32 {
-        let pt2 = pt.clone() * s;
-        println!("{} * {} = {}", s, fmt_point(&pt), fmt_point(&pt2));
+    let mut i: usize = 0;
+    let mut point = curve.identity();
+    loop {
+        let generator = curve.point(felt!(15, prime), felt!(86, prime)).unwrap();
+        point = point + generator;
+        i += 1;
+
+        if point == curve.identity() {
+            break;
+        }
     }
 
-    println!("Hello, world!");
+    println!("Order of the curve: {}", i);
 }
