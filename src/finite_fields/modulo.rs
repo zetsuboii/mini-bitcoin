@@ -1,6 +1,5 @@
-use std::ops::{Add, Rem};
-
 use num_bigint::BigUint;
+use std::ops::{Add, Rem};
 
 /// Rust rem operator is not the same as the mathematical modulo operator
 /// This trait implements the mathematical modulo operator

@@ -1,9 +1,10 @@
 #![warn(clippy::all, clippy::pedantic, clippy::style, rust_2018_idioms)]
 
-mod elliptic_curve;
-mod finite_fields;
+pub mod elliptic_curve;
+pub mod finite_fields;
 
-use crate::{elliptic_curve::Curve, finite_fields::macros::felt};
+use elliptic_curve::curve::Curve;
+use finite_fields::macros::felt;
 
 fn main() {
     let prime: u64 = 223;

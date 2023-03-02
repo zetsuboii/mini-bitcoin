@@ -1,7 +1,7 @@
 /// Convenience macro for creating a new Felt
 macro_rules! felt {
     ($num:expr, $prime: expr) => {
-        crate::finite_fields::Felt::new(
+        crate::finite_fields::element::Felt::new(
             ::num_bigint::BigUint::from($num as u32), 
             ::num_bigint::BigUint::from($prime as u32)
         )
