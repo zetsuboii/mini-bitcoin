@@ -1,12 +1,15 @@
 #![allow(unused)]
 
+use std::ops::Add;
+
 use color_eyre::eyre::{eyre, Result};
 
 use crate::finite_fields::{pow::Pow, Felt};
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 struct Curve {
-    a: Felt,
-    b: Felt,
+    pub a: Felt,
+    pub b: Felt,
 }
 
 impl Curve {
@@ -19,6 +22,7 @@ impl Curve {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 struct Point {
     x: Felt,
     y: Felt,
@@ -31,24 +35,30 @@ impl Point {
     pub fn is_on_curve(&self) -> bool {
         let left = self.y.pow(2u32);
         let right = self.x.pow(3u32) + self.a * self.x + self.b;
-
-        println!("left: {}, right: {}", left, right);
-
         left == right
     }
 
     pub fn new(x: Felt, y: Felt, a: Felt, b: Felt) -> Self {
-        let point = Self { x, y, a, b };
-        assert!(point.is_on_curve());
-        point
+        Self { x, y, a, b }
     }
 
     pub fn try_new(x: Felt, y: Felt, a: Felt, b: Felt) -> Result<Self> {
         let point = Self { x, y, a, b };
-        match point.is_on_curve() {
-            true => Ok(point),
-            false => Err(eyre!("Point is not on the curve")),
+        if point.is_on_curve() {
+            Ok(point)
+        } else {
+            Err(eyre!("Point is not on the curve"))
         }
+    }
+}
+
+impl Add for Point {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        println!("x: {} + {} = {}", self.x, rhs.x, self.x + rhs.x);
+        println!("y: {} + {} = {}", self.y, rhs.y, self.y + rhs.y);
+        Self::new(self.x + rhs.x, self.y + rhs.y, self.a, self.b)
     }
 }
 
@@ -77,4 +87,23 @@ mod tests {
             assert!(point.is_err());
         }
     }
+
+    #[test]
+    fn test_point_add() {
+        let prime = 223u64;
+
+        let curve = Curve::new(felt!(0, prime), felt!(7, prime));
+
+        let pt1 = curve.point(felt!(170, prime), felt!(142, prime)).unwrap();
+        let pt2 = curve.point(felt!(60, prime), felt!(139, prime)).unwrap();
+        let expected_sum = curve.point(felt!(220, prime), felt!(181, prime)).unwrap();
+
+        dbg!(pt1);
+        dbg!(pt2);
+        dbg!(pt1 + pt2);
+
+        assert_eq!(pt1 + pt2, expected_sum);
+    }
 }
+
+fn xa0s_s1() {}

@@ -10,7 +10,7 @@ impl Pow<u32> for U256 {
         let mut base = *self;
 
         for _ in 0..exponent {
-            result = result * base;
+            result *= base;
         }
 
         result
@@ -23,7 +23,7 @@ impl Pow<u32> for u64 {
         let mut base = *self;
 
         for _ in 0..exponent {
-            result = result * base;
+            result *= base;
         }
 
         result

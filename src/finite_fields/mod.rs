@@ -1,8 +1,8 @@
 #![allow(unused)]
 
+pub mod macros;
 pub mod modulo;
 pub mod pow;
-pub mod macros;
 
 use primitive_types::U256;
 use std::{
@@ -29,10 +29,6 @@ impl Felt {
 impl PartialEq for Felt {
     fn eq(&self, other: &Self) -> bool {
         self.inner == other.inner
-    }
-
-    fn ne(&self, other: &Self) -> bool {
-        !self.eq(other)
     }
 }
 
@@ -100,18 +96,15 @@ impl Pow<u32> for Felt {
 
 impl Pow<i64> for Felt {
     fn pow(&self, exponent: i64) -> Self {
-        let inner = match exponent > 0 {
-            true => {
-                let exponent = U256::from(exponent);
-                self.inner.pow(exponent).modulo(&self.prime)
-            }
-            false => {
-                // In finite fields we can use the following property:
-                // a^(-1) = a^(p-2) (mod p)
-                let prime = self.prime - U256::from(1);
-                let exponent = prime - U256::from(exponent.abs());
-                self.inner.pow(exponent).modulo(&self.prime)
-            }
+        let inner = if exponent > 0 {
+            let exponent = U256::from(exponent);
+            self.inner.pow(exponent).modulo(&self.prime)
+        } else {
+            // In finite fields we can use the following property:
+            // a^(-1) = a^(p-2) (mod p)
+            let prime = self.prime - U256::from(1);
+            let exponent = prime - U256::from(exponent.abs());
+            self.inner.pow(exponent).modulo(&self.prime)
         };
 
         Felt::new(inner, self.prime)
