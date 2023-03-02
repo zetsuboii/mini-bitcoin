@@ -6,6 +6,8 @@ use color_eyre::eyre::{eyre, Result};
 
 use crate::finite_fields::{macros::felt, pow::Pow, Felt};
 
+/// Represents an elliptic curve
+/// ( y^2 = x^3 + ax + b )
 #[derive(Debug, Clone, PartialEq)]
 pub struct Curve {
     pub a: Felt,
@@ -14,10 +16,7 @@ pub struct Curve {
 
 impl Curve {
     pub fn new(a: Felt, b: Felt) -> Self {
-        Self {
-            a: a.clone(),
-            b: b.clone(),
-        }
+        Self { a, b }
     }
 
     pub fn point(&self, x: Felt, y: Felt) -> Result<Point> {
@@ -25,6 +24,9 @@ impl Curve {
     }
 }
 
+/// Represents type of a point on an elliptic curve
+/// 
+/// Can be either a normal point or infinity
 #[derive(Debug, Clone, PartialEq)]
 pub enum PointType {
     Infinity,
@@ -35,11 +37,12 @@ impl PointType {
     pub fn unwrap(self) -> Felt {
         match self {
             Self::Infinity => panic!("Cannot unwrap infinity"),
-            Self::Normal(felt) => felt.clone(),
+            Self::Normal(felt) => felt,
         }
     }
 }
 
+/// Represents a point on an elliptic curve
 #[derive(Debug, Clone, PartialEq)]
 pub struct Point {
     pub x: PointType,
@@ -63,21 +66,35 @@ impl Point {
         left == right
     }
 
+    /// Creates a new point from point types
     pub fn new(x: PointType, y: PointType, a: PointType, b: PointType) -> Self {
-        Self { x, y, a, b }
+        let point = Self { x, y, a, b };
+        assert!(point.is_on_curve(), "Point is not on the curve");
+        point
     }
 
+    /// Creates a new point from felt values
+    /// Asserts that the point is on the curve
     pub fn from_felts(x: Felt, y: Felt, a: Felt, b: Felt) -> Self {
-        Self {
+        let point = Self {
             x: PointType::Normal(x),
             y: PointType::Normal(y),
             a: PointType::Normal(a),
             b: PointType::Normal(b),
-        }
+        };
+        assert!(point.is_on_curve(), "Point is not on the curve");
+        point
     }
 
+    /// Creates a new point from felt values
     pub fn try_from_felts(x: Felt, y: Felt, a: Felt, b: Felt) -> Result<Self> {
-        let point = Self::from_felts(x, y, a, b);
+        let point = Self {
+            x: PointType::Normal(x),
+            y: PointType::Normal(y),
+            a: PointType::Normal(a),
+            b: PointType::Normal(b),
+        };
+
         if point.is_on_curve() {
             Ok(point)
         } else {
@@ -86,14 +103,13 @@ impl Point {
     }
 }
 
-/// This is NOT the point addition
-/// https://en.wikipedia.org/wiki/Elliptic_curve_point_multiplication
 impl Add for Point {
     type Output = Self;
 
+    /// Performs point addition on two points on an elliptic curve
+    /// <https://en.wikipedia.org/wiki/Elliptic_curve_point_multiplication#Point_addition>
+    #[allow(clippy::erasing_op)]
     fn add(self, rhs: Self) -> Self::Output {
-        // Clone values for convenience
-
         match &self.x {
             PointType::Normal(x1) => match &rhs.x {
                 PointType::Normal(x2) => {
@@ -138,10 +154,10 @@ impl Add for Point {
                     }
                 }
                 // Case 0.1: rhs points to Infinity, return self
-                PointType::Infinity => self.clone(),
+                PointType::Infinity => self,
             },
             // Case 0.0: self points to Infinity, return rhs
-            PointType::Infinity => rhs.clone(),
+            PointType::Infinity => rhs
         }
     }
 }
@@ -149,6 +165,7 @@ impl Add for Point {
 impl Mul<u32> for Point {
     type Output = Self;
 
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn mul(self, rhs: u32) -> Self::Output {
         let mut product = Point::new(
             PointType::Infinity,
@@ -203,5 +220,3 @@ mod tests {
         assert_eq!(pt1 + pt2, expected_sum);
     }
 }
-
-fn xa0s_s1() {}

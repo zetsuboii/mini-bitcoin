@@ -36,6 +36,7 @@ macro_rules! felt {
 /// let qux = Foo { bar: 2 };
 /// 
 /// assert_eq!((&baz).add(&qux), Foo { bar: 3 });
+/// ```
 macro_rules! impl_refs {
     ($trait:ident, $fn:ident, $type_lhs:ty, $type_rhs:ty) => {
         impl<'a, 'b> $trait<&'b $type_rhs> for &'a $type_lhs {

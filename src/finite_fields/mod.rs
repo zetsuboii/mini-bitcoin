@@ -13,6 +13,10 @@ use std::{
 use self::{modulo::Modulo, pow::Pow};
 use macros::{felt, impl_refs};
 
+/// Represents a field element
+/// 
+/// Prime used in secp256k1 is pretty large and values used in the field can be
+/// between 0 and prime ** prime so I used `BigUint` to represent the values
 #[derive(Debug, Default, Clone)]
 pub struct Felt {
     inner: BigUint,
@@ -131,7 +135,7 @@ impl<'b> Pow<u32> for &'b Felt {
     type Output = Felt;
 
     fn pow(&self, exponent: u32) -> Self::Output {
-        let cloned = self.clone();
+        let cloned = (*self).clone();
         cloned.pow(exponent)
     }
 }
@@ -141,7 +145,7 @@ impl Pow<i64> for Felt {
 
     fn pow(&self, exponent: i64) -> Self::Output {
         let inner = if exponent > 0 {
-            let exponent = BigUint::from(exponent as u32);
+            let exponent = BigUint::from(u32::try_from(exponent).unwrap());
             self.inner
                 .pow(exponent.try_into().unwrap())
                 .modulo(&self.prime)
@@ -149,7 +153,7 @@ impl Pow<i64> for Felt {
             // In finite fields we can use the following property:
             // a^(-1) = a^(p-2) (mod p)
             let prime = &self.prime - BigUint::from(1u32);
-            let exponent = prime - BigUint::from(exponent.abs() as u32);
+            let exponent = prime - BigUint::from(u32::try_from(exponent.abs()).unwrap());
             self.inner
                 .pow(exponent.try_into().unwrap())
                 .modulo(&self.prime)
@@ -163,7 +167,7 @@ impl<'b> Pow<i64> for &'b Felt {
     type Output = Felt;
 
     fn pow(&self, exponent: i64) -> Self::Output {
-        let cloned = self.clone();
+        let cloned = (*self).clone();
         cloned.pow(exponent)
     }
 }
