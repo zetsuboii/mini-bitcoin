@@ -1,13 +1,13 @@
 use std::ops::{Add, Rem};
 
-use primitive_types::U256;
+use num_bigint::BigUint;
 
 pub trait Modulo {
     fn modulo(&self, other: &Self) -> Self;
 }
 
-impl Modulo for U256 {
-    fn modulo(&self, other: &Self) -> U256 {
+impl Modulo for BigUint {
+    fn modulo(&self, other: &Self) -> BigUint {
         // a mod b = ((a rem b) + b) rem b
         self.rem(other).add(other).rem(other)
     }

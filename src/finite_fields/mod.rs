@@ -4,25 +4,33 @@ pub mod macros;
 pub mod modulo;
 pub mod pow;
 
-use primitive_types::U256;
+use num_bigint::BigUint;
 use std::{
     fmt::Display,
     ops::{Add, Div, Mul, Rem, Sub},
 };
 
 use self::{modulo::Modulo, pow::Pow};
-use macros::felt;
+use macros::{felt, impl_refs};
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone)]
 pub struct Felt {
-    inner: U256,
-    prime: U256,
+    inner: BigUint,
+    prime: BigUint,
 }
 
 impl Felt {
-    pub fn new(inner: U256, prime: U256) -> Self {
+    pub fn new(inner: BigUint, prime: BigUint) -> Self {
         assert!(inner < prime, "Inner value must be less than prime");
         Self { inner, prime }
+    }
+
+    pub fn inner(&self) -> &BigUint {
+        &self.inner
+    }
+
+    pub fn prime(&self) -> &BigUint {
+        &self.prime
     }
 }
 
@@ -53,19 +61,23 @@ impl Add for Felt {
     }
 }
 
+impl_refs!(Add, add, Felt, Felt);
+
 impl Sub for Felt {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
         let result = if self.inner > rhs.inner {
-            self.inner - rhs.inner
+            &self.inner - rhs.inner
         } else {
-            self.prime - (rhs.inner - self.inner)
+            &self.prime - (rhs.inner - self.inner)
         };
 
-        Self::new(result, self.prime)
+        Self::new(result, self.prime.clone())
     }
 }
+
+impl_refs!(Sub, sub, Felt, Felt);
 
 impl Mul for Felt {
     type Output = Self;
@@ -76,38 +88,83 @@ impl Mul for Felt {
     }
 }
 
+impl Mul<u32> for Felt {
+    type Output = Felt;
+
+    /// Scalar multiplication for Felt
+    fn mul(self, rhs: u32) -> Self::Output {
+        let result: BigUint = self.inner.mul(BigUint::from(rhs)).modulo(&self.prime);
+        Self::new(result, self.prime)
+    }
+}
+
+impl_refs!(Mul, mul, Felt, Felt);
+impl_refs!(Mul, mul, Felt, u32);
+
 impl Div for Felt {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self::Output {
-        let exponent = self.prime - U256::from(2);
-        let result = (self.inner * rhs.inner.pow(exponent)).modulo(&self.prime);
+        let exponent = &self.prime - BigUint::from(2u32);
+        let result = (self.inner * rhs.inner.pow(exponent.try_into().unwrap())).modulo(&self.prime);
         Self::new(result, self.prime)
     }
 }
 
+impl_refs!(Div, div, Felt, Felt);
+
 impl Pow<u32> for Felt {
-    fn pow(&self, exponent: u32) -> Self {
-        let exponent = U256::from(exponent).modulo(&self.prime);
-        let result = self.inner.pow(exponent).modulo(&self.prime);
-        Self::new(result, self.prime)
+    type Output = Felt;
+
+    fn pow(&self, exponent: u32) -> Self::Output {
+        let exponent = BigUint::from(exponent).modulo(&self.prime);
+        let result = self
+            .inner
+            .pow(exponent.try_into().unwrap())
+            .modulo(&self.prime);
+
+        Self::new(result, self.prime.clone())
+    }
+}
+
+impl<'b> Pow<u32> for &'b Felt {
+    type Output = Felt;
+
+    fn pow(&self, exponent: u32) -> Self::Output {
+        let cloned = self.clone();
+        cloned.pow(exponent)
     }
 }
 
 impl Pow<i64> for Felt {
-    fn pow(&self, exponent: i64) -> Self {
+    type Output = Felt;
+
+    fn pow(&self, exponent: i64) -> Self::Output {
         let inner = if exponent > 0 {
-            let exponent = U256::from(exponent);
-            self.inner.pow(exponent).modulo(&self.prime)
+            let exponent = BigUint::from(exponent as u32);
+            self.inner
+                .pow(exponent.try_into().unwrap())
+                .modulo(&self.prime)
         } else {
             // In finite fields we can use the following property:
             // a^(-1) = a^(p-2) (mod p)
-            let prime = self.prime - U256::from(1);
-            let exponent = prime - U256::from(exponent.abs());
-            self.inner.pow(exponent).modulo(&self.prime)
+            let prime = &self.prime - BigUint::from(1u32);
+            let exponent = prime - BigUint::from(exponent.abs() as u32);
+            self.inner
+                .pow(exponent.try_into().unwrap())
+                .modulo(&self.prime)
         };
 
-        Felt::new(inner, self.prime)
+        Felt::new(inner, self.prime.clone())
+    }
+}
+
+impl<'b> Pow<i64> for &'b Felt {
+    type Output = Felt;
+
+    fn pow(&self, exponent: i64) -> Self::Output {
+        let cloned = self.clone();
+        cloned.pow(exponent)
     }
 }
 
@@ -125,22 +182,22 @@ mod tests {
     fn test_add_sub() {
         let felt_a = felt!(11, 19);
         let felt_b = felt!(17, 19);
-        assert_eq!(felt_a + felt_b, Felt::new(9.into(), 19.into()));
+        assert_eq!(felt_a + felt_b, felt!(9, 19));
 
         let felt_a = felt!(6, 19);
         let felt_b = felt!(13, 19);
-        assert_eq!(felt_a - felt_b, Felt::new(12.into(), 19.into()));
+        assert_eq!(felt_a - felt_b, felt!(12, 19));
     }
 
     #[test]
     fn test_mul_div() {
         let felt_a = felt!(2, 19);
         let felt_b = felt!(17, 19);
-        assert_eq!(felt_a * felt_b, Felt::new(15.into(), 19.into()));
+        assert_eq!(felt_a * felt_b, felt!(15, 19));
 
         let felt_a = felt!(2, 19);
         let felt_b = felt!(7, 19);
-        assert_eq!(felt_a / felt_b, Felt::new(3.into(), 19.into()));
+        assert_eq!(felt_a / felt_b, felt!(3, 19));
     }
 
     #[test]
