@@ -1,5 +1,5 @@
 use super::curve::Curve;
-use crate::finite_fields::{element::Felt, pow::Pow};
+use crate::finite_fields::{element::Felt, pow::Pow, macros::impl_refs};
 use color_eyre::eyre::{eyre, Result};
 use std::ops::{Add, Mul};
 
@@ -78,6 +78,22 @@ impl Point {
             Err(eyre!("Point is not on the curve"))
         }
     }
+
+    pub fn binary_expansion_mul(&self, coefficient: u32) -> Self {
+        let mut coefficient = coefficient;
+        let mut current = self.clone();
+        let mut result = self.curve.identity();
+
+        while coefficient > 0 {
+            if coefficient & 1 == 1 {
+                result = result + &current;
+            }
+            current = &current + &current;
+            coefficient >>= 1;
+        }
+
+        result
+    }
 }
 
 impl Add for Point {
@@ -139,6 +155,8 @@ impl Add for Point {
         }
     }
 }
+
+impl_refs!(Add, add, Point, Point);
 
 impl Mul<u32> for Point {
     type Output = Self;

@@ -91,4 +91,19 @@ mod tests {
 
         assert_eq!(i, 7);
     }
+
+    #[test]
+    fn test_binary_expansion() {
+        let prime = 223u64;
+        let curve = Curve::new(felt!(0, prime), felt!(7, prime));
+        let generator = curve.point(felt!(47, prime), felt!(71, prime)).unwrap();
+
+        for i in 0..10 {
+            let coefficient = (i + 1) as u32;
+            let multiple = generator.clone() * coefficient;
+            let binary_expanded = generator.clone().binary_expansion_mul(coefficient);
+
+            assert_eq!(multiple, binary_expanded);
+        }
+    }
 }
