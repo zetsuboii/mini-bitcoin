@@ -16,6 +16,25 @@ pub struct Felt {
 }
 
 impl Felt {
+    /// Creates a new field element
+    ///
+    /// # Panics
+    ///
+    /// Panics if the inner value is greater than or equal to the prime
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use elliptic_curve::finite_fields::Felt;
+    /// use num_bigint::BigUint;
+    ///
+    /// let prime = BigUint::from(2u32).pow(256u32) - BigUint::from(2u32).pow(32u32) - BigUint::from(977u32);
+    /// let inner = BigUint::from(5u32);
+    /// let felt = Felt::new(inner, prime);
+    ///
+    /// assert_eq!(felt.inner(), &BigUint::from(5u32));
+    /// assert_eq!(felt.prime(), &prime);
+    /// ```
     pub fn new(inner: BigUint, prime: BigUint) -> Self {
         assert!(inner < prime, "Inner value must be less than prime");
         Self { inner, prime }

@@ -1,13 +1,17 @@
 #![allow(unused)]
 pub mod curve;
 pub mod point;
+pub mod secp256k1;
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use crate::finite_fields::macros::felt;
+    use num_bigint::BigUint;
     use primitive_types::U256;
 
-    use super::{curve::Curve, *};
+    use super::{curve::Curve, point::Point, secp256k1::Secp256k1Point, *};
 
     #[test]
     fn test_curve() {
@@ -105,5 +109,45 @@ mod tests {
 
             assert_eq!(naive_multiple, binary_expanded);
         }
+    }
+
+    #[test]
+    fn test_secp256k1_values() {
+        // The fact that this works means point is on the curve
+        let point = Secp256k1Point::g();
+        let point: Point = point.clone().into();
+
+        // Compare point values with string representations of the values
+        assert_eq!(
+            BigUint::from_str(
+                "55066263022277343669578718895168534326250603453777594175500187360389116729240"
+            )
+            .unwrap(),
+            point.x.unwrap().inner().to_owned()
+        );
+
+        assert_eq!(
+            BigUint::from_str(
+                "32670510020758816978083085130507043184471273380659243275938904335757337482424"
+            )
+            .unwrap(),
+            point.y.unwrap().inner().to_owned()
+        );
+
+        assert_eq!(
+            BigUint::from_str(
+                "115792089237316195423570985008687907853269984665640564039457584007908834671663"
+            )
+            .unwrap(),
+            point.curve.a.prime().to_owned()
+        );
+    }
+
+    #[test]
+    fn test_secp256k1_scalar() {
+        let point = Secp256k1Point::g();
+        let identity: Point = (point * Secp256k1Point::order()).into();
+
+        assert_eq!(identity, Secp256k1Point::curve().identity());
     }
 }

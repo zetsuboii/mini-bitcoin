@@ -15,7 +15,7 @@ macro_rules! felt {
 /// ```
 /// use std::ops::Add;
 ///
-/// #[derive(Debug, Clone, PartialEq))]
+/// #[derive(Debug, Clone, PartialEq)]
 /// struct Foo {
 ///     bar: u32,
 /// }

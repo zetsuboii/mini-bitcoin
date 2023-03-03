@@ -1,7 +1,8 @@
 use super::curve::Curve;
-use crate::finite_fields::{element::Felt, pow::Pow, macros::impl_refs};
+use crate::finite_fields::{element::Felt, macros::impl_refs, pow::Pow};
 use color_eyre::eyre::{eyre, Result};
-use std::ops::{Add, Mul};
+use num_bigint::BigUint;
+use std::ops::{Add, BitAnd, Mul};
 
 /// Represents type of a point on an elliptic curve
 ///
@@ -13,6 +14,11 @@ pub enum PointType {
 }
 
 impl PointType {
+    /// Unwraps the point type
+    ///
+    /// # Panics
+    ///
+    /// Panics if the point type is infinity
     pub fn unwrap(self) -> Felt {
         match self {
             Self::Infinity => panic!("Cannot unwrap infinity"),
@@ -46,6 +52,10 @@ impl Point {
     }
 
     /// Creates a new point from point types
+    ///
+    /// # Panics
+    ///
+    /// Panics if the point is not on the curve
     pub fn new(x: PointType, y: PointType, curve: Curve) -> Self {
         let point = Self { x, y, curve };
         assert!(point.is_on_curve(), "Point is not on the curve");
@@ -54,6 +64,25 @@ impl Point {
 
     /// Creates a new point from felt values
     /// Asserts that the point is on the curve
+    ///
+    /// # Panics
+    ///
+    /// Panics if the point is not on the curve
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use elliptic_curve::elliptic_curve::point::Point;
+    /// use elliptic_curve::finite_fields::macros::felt;
+    ///
+    /// let prime = 233u64;
+    /// let point = Point::from_felts(
+    ///     felt!(5, prime), 
+    ///     felt!(1, prime), 
+    ///     felt!(0, prime),
+    ///     felt!(7, prime)
+    /// );
+    /// ```
     pub fn from_felts(x: Felt, y: Felt, a: Felt, b: Felt) -> Self {
         let point = Self {
             x: PointType::Normal(x),
@@ -65,6 +94,10 @@ impl Point {
     }
 
     /// Creates a new point from felt values
+    /// 
+    /// # Errors
+    /// 
+    /// Returns an error if the point is not on the curve
     pub fn try_from_felts(x: Felt, y: Felt, a: Felt, b: Felt) -> Result<Self> {
         let point = Self {
             x: PointType::Normal(x),
@@ -89,6 +122,9 @@ impl Point {
         product
     }
 
+    /// Scalar multiplies the point using binary expansion method
+    /// Its main idea is to handle coefficient as a binary number, iterate on each
+    /// bit and multiply by two if current bit is 1
     pub fn binary_expansion_mul(&self, coefficient: u32) -> Self {
         let mut coefficient = coefficient;
         let mut current = self.clone();
@@ -96,6 +132,26 @@ impl Point {
 
         while coefficient > 0 {
             if coefficient & 1 == 1 {
+                result = result + &current;
+            }
+            current = &current + &current;
+            coefficient >>= 1;
+        }
+
+        result
+    }
+
+    /// Binary expansion method for `BigUint`
+    pub fn binary_expansion_biguint(&self, coefficient: BigUint) -> Self {
+        let mut coefficient = coefficient;
+        let mut current = self.clone();
+        let mut result = self.curve.identity();
+
+        let zero = BigUint::from(0u32);
+        let one = BigUint::from(1u32);
+
+        while coefficient > BigUint::from(0u32) {
+            if coefficient.clone().bitand(one.clone()) == one.clone() {
                 result = result + &current;
             }
             current = &current + &current;
@@ -171,8 +227,15 @@ impl_refs!(Add, add, Point, Point);
 impl Mul<u32> for Point {
     type Output = Self;
 
-    #[allow(clippy::suspicious_arithmetic_impl)]
     fn mul(self, rhs: u32) -> Self::Output {
         self.binary_expansion_mul(rhs)
+    }
+}
+
+impl Mul<BigUint> for Point {
+    type Output = Self;
+
+    fn mul(self, coefficient: BigUint) -> Self::Output {
+        self.binary_expansion_biguint(coefficient)
     }
 }

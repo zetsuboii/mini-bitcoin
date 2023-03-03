@@ -1,9 +1,10 @@
 #![allow(unused)]
-
 pub mod element;
 pub mod macros;
 pub mod modulo;
 pub mod pow;
+
+// TODO: Assert all operations are done in the same field
 
 #[cfg(test)]
 mod tests {
