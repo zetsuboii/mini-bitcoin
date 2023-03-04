@@ -1,12 +1,15 @@
+use super::{
+    curve::Curve,
+    point::{Point, PointType},
+    signature::Signature,
+};
+use crate::finite_fields::{element::Felt, macros::impl_refs, modulo::Modulo};
+use color_eyre::eyre::{eyre, Result};
+use num_bigint::BigUint;
 use std::{
     fmt::Display,
-    ops::{Div, Mul},
+    ops::{Add, Div, Mul},
 };
-
-use num_bigint::BigUint;
-
-use super::{curve::Curve, point::Point};
-use crate::finite_fields::{element::Felt, macros::impl_refs, modulo::Modulo};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Secp256k1Felt(Felt);
@@ -27,6 +30,13 @@ impl Secp256k1Felt {
 
     pub fn new(inner: BigUint) -> Self {
         Self(Felt::new(inner, Self::prime()))
+    }
+
+    pub fn from_bytes(value: &[u8]) -> Result<Self> {
+        match BigUint::parse_bytes(value, 16) {
+            Some(value) => Ok(Self::new(value)),
+            None => Err(eyre!("Invalid byte sequence")),
+        }
     }
 
     pub fn inner(&self) -> &BigUint {
@@ -105,6 +115,14 @@ impl Secp256k1Point {
         )
     }
 
+    pub fn x(&self) -> &PointType {
+        &self.0.x
+    }
+
+    pub fn y(&self) -> &PointType {
+        &self.0.y
+    }
+
     /// Creates a new point on SECP256K1 curve
     ///
     /// # Panics
@@ -119,6 +137,14 @@ impl Secp256k1Point {
 
         Self(point)
     }
+
+    pub fn verify(&self, z: Secp256k1Felt, signature: Signature) -> bool {
+        let u = &z / signature.s();
+        let v = signature.r() / signature.s();
+
+        let total = Self::g() * u.inner() + self * v.inner();
+        total.x().clone().unwrap().inner() == signature.r().inner()
+    }
 }
 
 impl From<Secp256k1Point> for Point {
@@ -126,6 +152,16 @@ impl From<Secp256k1Point> for Point {
         point.0
     }
 }
+
+impl Add<Secp256k1Point> for Secp256k1Point {
+    type Output = Self;
+
+    fn add(self, rhs: Secp256k1Point) -> Self::Output {
+        Self(self.0 + rhs.0)
+    }
+}
+
+impl_refs!(Add, add, Secp256k1Point, Secp256k1Point);
 
 impl Mul<u32> for Secp256k1Point {
     type Output = Self;
@@ -152,3 +188,6 @@ impl Mul<BigUint> for Secp256k1Point {
         Self(self.0 * coefficient)
     }
 }
+
+impl_refs!(Mul, mul, Secp256k1Point, BigUint);
+impl_refs!(Mul, mul, Secp256k1Point, u32);
