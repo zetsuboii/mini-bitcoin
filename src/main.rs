@@ -45,7 +45,7 @@ fn main() {
 
     let before = std::time::Instant::now();
 
-    if point.verify(z, signature) {
+    if point.verify(&z, &signature) {
         println!("Signature 1 is valid");
     } else {
         println!("Signature 1 is invalid");
@@ -72,7 +72,7 @@ fn main() {
 
     let before = std::time::Instant::now();
 
-    if point.verify(z, signature) {
+    if point.verify(&z, &signature) {
         println!("Signature 2 is valid");
     } else {
         println!("Signature 2 is invalid");

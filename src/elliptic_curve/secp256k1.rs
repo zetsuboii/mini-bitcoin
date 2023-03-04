@@ -138,8 +138,8 @@ impl Secp256k1Point {
         Self(point)
     }
 
-    pub fn verify(&self, z: Secp256k1Felt, signature: Signature) -> bool {
-        let u = &z / signature.s();
+    pub fn verify(&self, z: &Secp256k1Felt, signature: &Signature) -> bool {
+        let u = z / signature.s();
         let v = signature.r() / signature.s();
 
         let total = Self::g() * u.inner() + self * v.inner();
