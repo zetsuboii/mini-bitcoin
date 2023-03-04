@@ -98,7 +98,7 @@ impl Mul for Felt {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        let result = (self.inner * rhs.inner).modulo(&self.prime);
+        let result =  (self.inner * rhs.inner).modulo(&self.prime);
         Self::new(result, self.prime)
     }
 }
@@ -121,7 +121,7 @@ impl Div for Felt {
 
     fn div(self, rhs: Self) -> Self::Output {
         let exponent = &self.prime - BigUint::from(2u32);
-        let result = (self.inner * rhs.inner.pow(exponent.try_into().unwrap())).modulo(&self.prime);
+        let result = (self.inner * rhs.inner.modpow(&exponent, &self.prime)).modulo(&self.prime);
         Self::new(result, self.prime)
     }
 }
@@ -157,17 +157,13 @@ impl Pow<i64> for Felt {
     fn pow(&self, exponent: i64) -> Self::Output {
         let inner = if exponent > 0 {
             let exponent = BigUint::from(u32::try_from(exponent).unwrap());
-            self.inner
-                .pow(exponent.try_into().unwrap())
-                .modulo(&self.prime)
+            self.inner.modpow(&exponent, &self.prime)
         } else {
             // In finite fields we can use the following property:
             // a^(-1) = a^(p-2) (mod p)
             let prime = &self.prime - BigUint::from(1u32);
             let exponent = prime - BigUint::from(u32::try_from(exponent.abs()).unwrap());
-            self.inner
-                .pow(exponent.try_into().unwrap())
-                .modulo(&self.prime)
+            self.inner.modpow(&exponent, &self.prime)
         };
 
         Felt::new(inner, self.prime.clone())
