@@ -1,4 +1,11 @@
-use super::secp256k1::Secp256k1Felt;
+use num_bigint::BigUint;
+
+use crate::finite_fields::{element::Felt, pow::Pow};
+
+use super::{
+    point::PointType,
+    secp256k1::{Secp256k1Felt, Secp256k1Point},
+};
 use std::fmt::Display;
 
 /// Represents a Signature on SECP256K1 curve
@@ -22,6 +29,40 @@ impl Signature {
     /// Returns s of the signature
     pub fn s(&self) -> &Secp256k1Felt {
         &self.s
+    }
+
+    /// Verifies the signature, given the message, signature and the public key
+    pub fn verify(
+        &self,
+        z: &Secp256k1Felt,
+        public_key: &Secp256k1Point,
+    ) -> bool {
+        println!("{} {} {} {}", z, self.r(), self.s(), public_key);
+        let g = Secp256k1Point::g();
+
+        let u = z / self.s();
+        let u = g * u.inner();
+
+        let v = self.r() / self.s();
+        let v = public_key * v.inner();
+
+        let p = u + v;
+        let r = self.r().inner();
+
+        match p.x() {
+            PointType::Infinity => false,
+            PointType::Normal(x) => x.inner() == r,
+        }
+    }
+
+    /// Convenience method to verify a signature given a message as a slice
+    pub fn verify_slice(
+        &self,
+        z: &[u8],
+        public_key: &Secp256k1Point,
+    ) -> bool {
+        let z = Secp256k1Felt::from_bytes(z).unwrap();
+        self.verify(&z, public_key)
     }
 }
 

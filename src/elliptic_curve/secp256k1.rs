@@ -50,11 +50,27 @@ impl From<Secp256k1Felt> for Felt {
     }
 }
 
+impl From<Felt> for Secp256k1Felt {
+    fn from(felt: Felt) -> Self {
+        Self(felt)
+    }
+}
+
 impl Display for Secp256k1Felt {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "0x{value:0>64}", value = self.inner().to_str_radix(16))
     }
 }
+
+impl Add<Secp256k1Felt> for Secp256k1Felt {
+    type Output = Secp256k1Felt;
+
+    fn add(self, rhs: Secp256k1Felt) -> Self::Output {
+        Self::from(self.0 + rhs.0)
+    }
+}
+
+impl_refs!(Add, add, Secp256k1Felt, Secp256k1Felt);
 
 impl Mul<Secp256k1Felt> for Secp256k1Felt {
     type Output = Secp256k1Felt;
@@ -144,6 +160,27 @@ impl Secp256k1Point {
 
         let total = Self::g() * u.inner() + self * v.inner();
         total.x().clone().unwrap().inner() == signature.r().inner()
+    }
+}
+
+impl Display for Secp256k1Point {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let x_repr = match self.x() {
+            PointType::Normal(x) => x.inner().to_str_radix(16),
+            PointType::Infinity => "Infinity".to_string(),
+        };
+
+        let y_repr = match self.y() {
+            PointType::Normal(y) => y.inner().to_str_radix(16),
+            PointType::Infinity => "Infinity".to_string(),
+        };
+
+        write!(
+            f,
+            "Point {{ x: 0x{x:0>64}, y: 0x{y:0>64} }}",
+            x = x_repr,
+            y = y_repr
+        )
     }
 }
 
