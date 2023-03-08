@@ -1,4 +1,9 @@
-use super::{secp256k1::{Secp256k1Felt, Secp256k1Point}, signature::{Signature, self}};
+use crate::helpers::hash::hash256;
+
+use super::{
+    secp256k1::{Secp256k1Felt, Secp256k1Point},
+    signature::{self, Signature},
+};
 use hmac::{Hmac, Mac};
 use num_bigint::BigUint;
 use sha2::Sha256;
@@ -20,18 +25,23 @@ impl PrivateKey {
     }
 
     /// Signs a field element using the private key
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// This method will panic if the field element is not a valid field element
-    pub fn sign(&self, z: Secp256k1Felt) -> Signature {
+    #[allow(clippy::many_single_char_names)]
+    pub fn sign(&self, z: &Secp256k1Felt) -> Signature {
         let k = self.deterministic_k(z.inner().clone());
-        println!("k: {}", k);
 
-        let r = Secp256k1Felt::from((Secp256k1Point::g() * &k).x().clone().unwrap());
+        // r = (k * G).x
+        let g_x = (Secp256k1Point::g() * &k).x().clone().unwrap();
+        let r = Secp256k1Felt::from(g_x);
+
+        // s = (z + r * secret) / k
         let k = Secp256k1Felt::new(k);
-        let mut s = &z + &r * &self.secret;
+        let mut s = (z + &r * &self.secret) / &k;
 
+        // if s > n / 2 then s = n - s
         let n = Secp256k1Point::order();
         let n_half = &n / BigUint::from(2u32);
 
@@ -39,18 +49,20 @@ impl PrivateKey {
             s = Secp256k1Felt::new(n - s.inner());
         }
 
-        Signature::new(r,s)
+        Signature::new(r, s)
     }
 
     /// Signs a byte slice using the private key
-    /// This is a convenience method that hashes the message before signing 
-    /// 
+    /// This is a convenience method that hashes the message before signing
+    ///
     /// # Panics
-    /// 
+    ///
     /// This method will panic if the hash of the message is not a valid field element
     pub fn sign_slice(&self, message: &[u8]) -> Signature {
-        let z = Secp256k1Felt::from_bytes(sha256::digest(message).as_bytes()).unwrap();
-        self.sign(z)
+        let hash = hash256(message);
+        let z = Secp256k1Felt::from_bytes(hash.as_slice());
+
+        self.sign(&z)
     }
 
     /// Checks if message is signed by this private key
@@ -60,17 +72,17 @@ impl PrivateKey {
 
     /// Convenience method to verify a slice after hashing it
     pub fn verify_slice(&self, message: &[u8], sig: &Signature) -> bool {
-        let z = Secp256k1Felt::from_bytes(sha256::digest(message).as_bytes()).unwrap();
+        let message_digest = hash256(message);
+        let z = Secp256k1Felt::from_bytes(&message_digest);
         self.verify(&z, sig)
     }
 
     /// Creates a unique, deterministic k value
-    /// 
+    ///
     /// This is important because if the same k value is used twice, the private key can
     /// be recovered using both signatures.
-    /// 
+    ///
     /// The specification for determining k is defined in RFC 6779 (<https://tools.ietf.org/html/rfc6979>)
-    /// TODO: Fix the function
     fn deterministic_k(&self, z: BigUint) -> BigUint {
         let k = [0u8; 32];
         let v = [1u8; 32];
@@ -80,8 +92,14 @@ impl PrivateKey {
             z -= Secp256k1Point::order();
         }
 
-        let z_bytes = z.to_bytes_be();
-        let secret_bytes = self.secret.inner().to_bytes_be();
+        let z = z.to_bytes_be();
+        let mut z_bytes = vec![0; 32 - z.len()];
+        z_bytes.extend_from_slice(z.as_slice());
+
+        // Pad secret to 32 bytes, from the left
+        let secret = self.secret.inner().to_bytes_be();
+        let mut secret_bytes = vec![0; 32 - secret.len()];
+        secret_bytes.extend_from_slice(secret.as_slice());
 
         // k := hmac_k (v || 0x00 || secret_bytes || z_bytes)
         let mut hmac = Hmac256::new_from_slice(&k).unwrap();

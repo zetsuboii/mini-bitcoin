@@ -32,11 +32,9 @@ impl Secp256k1Felt {
         Self(Felt::new(inner, Self::prime()))
     }
 
-    pub fn from_bytes(value: &[u8]) -> Result<Self> {
-        match BigUint::parse_bytes(value, 16) {
-            Some(value) => Ok(Self::new(value)),
-            None => Err(eyre!("Invalid byte sequence")),
-        }
+    pub fn from_bytes(value: &[u8]) -> Self {
+        let inner = BigUint::from_bytes_be(value);
+        Self::new(inner)
     }
 
     pub fn inner(&self) -> &BigUint {
@@ -66,7 +64,13 @@ impl Add<Secp256k1Felt> for Secp256k1Felt {
     type Output = Secp256k1Felt;
 
     fn add(self, rhs: Secp256k1Felt) -> Self::Output {
-        Self::from(self.0 + rhs.0)
+        let one = BigUint::from(1u32);
+        let n = Self::order();
+        
+        let sum = self.inner() + rhs.inner();
+        let sum_mod = sum.modpow(&one, &n);
+
+        Self::new(sum_mod)
     }
 }
 

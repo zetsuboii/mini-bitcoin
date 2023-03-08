@@ -9,7 +9,7 @@ pub mod private_key;
 mod tests {
     use std::str::FromStr;
 
-    use crate::{finite_fields::macros::felt, elliptic_curve::{secp256k1::Secp256k1Felt, signature::Signature}};
+    use crate::{finite_fields::macros::felt, elliptic_curve::{secp256k1::Secp256k1Felt, signature::Signature}, helpers::bytes::ToBytesBigEndian};
     use num_bigint::BigUint;
     use primitive_types::U256;
 
@@ -170,27 +170,23 @@ mod tests {
         let point = Secp256k1Point::new(point_x, point_y);
 
         let good_z = Secp256k1Felt::from_bytes(
-            b"ec208baa0fc1c19f708a9ca96fdeff3ac3f230bb4a7ba4aede4942ad003c0f60",
-        )
-        .unwrap();
+            &"ec208baa0fc1c19f708a9ca96fdeff3ac3f230bb4a7ba4aede4942ad003c0f60".to_bytes_be(),
+        );
 
         let signature = Signature::new(
             Secp256k1Felt::from_bytes(
-                b"ac8d1c87e51d0d441be8b3dd5b05c8795b48875dffe00b7ffcfac23010d3a395",
-            )
-            .unwrap(),
+                &"ac8d1c87e51d0d441be8b3dd5b05c8795b48875dffe00b7ffcfac23010d3a395".to_bytes_be(),
+            ),
             Secp256k1Felt::from_bytes(
-                b"068342ceff8935ededd102dd876ffd6ba72d6a427a3edb13d26eb0781cb423c4",
+                &"068342ceff8935ededd102dd876ffd6ba72d6a427a3edb13d26eb0781cb423c4".to_bytes_be(),
             )
-            .unwrap(),
         );
 
         assert_eq!(point.verify(&good_z, &signature), true);
 
         let bad_z = Secp256k1Felt::from_bytes(
-            b"bad000aa0fc1c19f708a9ca96fdeff3ac3f230bb4a7ba4aede4942ad003c0f60",
-        )
-        .unwrap();
+            &"bad000aa0fc1c19f708a9ca96fdeff3ac3f230bb4a7ba4aede4942ad003c0f60".to_bytes_be(),
+        );
 
         assert_eq!(point.verify(&bad_z, &signature), false);
     }

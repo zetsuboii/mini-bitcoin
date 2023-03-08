@@ -32,12 +32,12 @@ impl Signature {
     }
 
     /// Verifies the signature, given the message, signature and the public key
+    #[allow(clippy::many_single_char_names)]
     pub fn verify(
         &self,
         z: &Secp256k1Felt,
         public_key: &Secp256k1Point,
     ) -> bool {
-        println!("{} {} {} {}", z, self.r(), self.s(), public_key);
         let g = Secp256k1Point::g();
 
         let u = z / self.s();
@@ -61,7 +61,7 @@ impl Signature {
         z: &[u8],
         public_key: &Secp256k1Point,
     ) -> bool {
-        let z = Secp256k1Felt::from_bytes(z).unwrap();
+        let z = Secp256k1Felt::from_bytes(z);
         self.verify(&z, public_key)
     }
 }
