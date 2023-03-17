@@ -11,6 +11,8 @@ use std::{
     ops::{Add, Div, Mul},
 };
 
+/// Represents a field element on SECP256K1 curve where the prime of the element is
+/// 2^256 - 2^32 - 977
 #[derive(Debug, Clone, PartialEq)]
 pub struct Secp256k1Felt(Felt);
 
@@ -40,6 +42,16 @@ impl Secp256k1Felt {
     pub fn inner(&self) -> &BigUint {
         self.0.inner()
     }
+
+    /// Returns the square root of the element
+    /// w^2 = v
+    /// w = v^(p+1) / 4
+    pub fn sqrt(&self) -> Self {
+        let prime = self.0.prime();
+        let exponent: BigUint = (prime + BigUint::from(1u32)) / BigUint::from(4u32);
+        let result = self.0.inner().modpow(&exponent, &prime);
+        Self::new(result)
+    }
 }
 
 impl From<Secp256k1Felt> for Felt {
@@ -66,7 +78,7 @@ impl Add<Secp256k1Felt> for Secp256k1Felt {
     fn add(self, rhs: Secp256k1Felt) -> Self::Output {
         let one = BigUint::from(1u32);
         let n = Self::order();
-        
+
         let sum = self.inner() + rhs.inner();
         let sum_mod = sum.modpow(&one, &n);
 
@@ -106,6 +118,7 @@ impl Div<Secp256k1Felt> for Secp256k1Felt {
 
 impl_refs!(Div, div, Secp256k1Felt, Secp256k1Felt);
 
+/// Represents a point on SECP256K1 curve
 #[derive(Debug, Clone, PartialEq)]
 pub struct Secp256k1Point(Point);
 
@@ -119,6 +132,14 @@ impl Secp256k1Point {
 
     pub fn order() -> BigUint {
         BigUint::parse_bytes(Self::SECP256K1_ORDER, 16).unwrap_or_default()
+    }
+
+    pub fn a() -> BigUint {
+        BigUint::from(0_u32)
+    }
+
+    pub fn b() -> BigUint {
+        BigUint::from(7_u32)
     }
 
     pub fn curve() -> Curve {
@@ -158,12 +179,103 @@ impl Secp256k1Point {
         Self(point)
     }
 
+    /// Verifies the signature given the hash of the message `z`
+    /// Returns if the signature is valid
     pub fn verify(&self, z: &Secp256k1Felt, signature: &Signature) -> bool {
         let u = z / signature.s();
         let v = signature.r() / signature.s();
 
         let total = Self::g() * u.inner() + self * v.inner();
         total.x().clone().unwrap().inner() == signature.r().inner()
+    }
+
+    /// Compresses the point using SEC format
+    ///
+    /// Returns a 65 byte array where
+    /// - the first byte is 0x04
+    /// - the next 32 bytes are the x coordinate
+    /// - the last 32 bytes are the y coordinate
+    ///
+    /// Returns None if the point is at infinity
+    pub fn sec_uncompressed(&self) -> Option<Vec<u8>> {
+        let mut result = Vec::new();
+
+        let x_bytes = match self.x() {
+            PointType::Normal(x) => x.inner().to_bytes_be(),
+            PointType::Infinity => return None,
+        };
+
+        let y_bytes = match self.y() {
+            PointType::Normal(y) => y.inner().to_bytes_be(),
+            PointType::Infinity => return None,
+        };
+
+        result.push(0x04);
+        result.extend_from_slice(&x_bytes);
+        result.extend_from_slice(&y_bytes);
+        Some(result)
+    }
+
+    pub fn sec_compressed(&self) -> Option<Vec<u8>> {
+        let mut result = Vec::new();
+
+        let x_bytes = match self.x() {
+            PointType::Normal(x) => x.inner().to_bytes_be(),
+            PointType::Infinity => return None,
+        };
+
+        let zero = BigUint::from(0u32);
+        let one = BigUint::from(1u32);
+        let two = BigUint::from(2u32);
+
+        let y_byte: u8 = match self.y() {
+            PointType::Normal(y) => {
+                if y.inner().modpow(&one, &two) == zero {
+                    0x2
+                } else {
+                    0x3
+                }
+            }
+            PointType::Infinity => return None,
+        };
+
+        result.push(y_byte);
+        result.extend_from_slice(&x_bytes);
+        Some(result)
+    }
+
+    /// Parses a point from SEC format
+    pub fn sec_parse(sec_bytes: Vec<u8>) -> Self {
+        if sec_bytes[0] == 4 {
+            // Handle uncompressed SEC pubkey
+            let x = BigUint::from_bytes_be(&sec_bytes[1..33]);
+            let y = BigUint::from_bytes_be(&sec_bytes[33..65]);
+            return Self::new(x, y);
+        }
+
+        let is_even = sec_bytes[0] == 2;
+        let x = Secp256k1Felt::new(BigUint::from_bytes_be(&sec_bytes[1..]));
+
+        let y_squared = x.inner().pow(3) + Self::b();
+        let y = Secp256k1Felt::new(y_squared).sqrt();
+
+        let y_even = y
+            .inner()
+            .modpow(&BigUint::from(1_u32), &BigUint::from(2_u32))
+            == BigUint::from(0_u32);
+
+        let prime = y.0.prime().clone();
+        let (even_y, odd_y) = if y_even {
+            (y.clone(), Secp256k1Felt::new(prime - y.inner()))
+        } else {
+            (Secp256k1Felt::new(prime - y.clone().inner()), y)
+        };
+
+        if is_even {
+            Secp256k1Point::new(x.inner().clone(), even_y.inner().clone())
+        } else {
+            Secp256k1Point::new(x.inner().clone(), odd_y.inner().clone())
+        }
     }
 }
 

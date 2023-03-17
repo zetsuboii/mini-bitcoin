@@ -24,6 +24,11 @@ impl PrivateKey {
         Self { secret, public_key }
     }
 
+    /// Returns the public key for this private key
+    pub fn public_key(&self) -> &Secp256k1Point {
+        &self.public_key
+    }
+
     /// Signs a field element using the private key
     ///
     /// # Panics
