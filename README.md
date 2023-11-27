@@ -18,8 +18,7 @@ cargo test
 ```
 
 ## Q/A
-Q: What's your plan with this repo?
-A: I just want to learn about Bitcoin and networking that's all
-<br>
-Q: Why is it so slow?
-A: Because I haven't optimized BigNumber operations and I don't plan to optimize them unless I throughly understand the optimizations mathemetically.
+- What's your plan with this repo? <br>
+  A: I just want to learn about Bitcoin and networking, that's all
+- Why is it so slow? <br>
+  A: Because I haven't optimized BigNumber operations and I don't plan to optimize them unless I throughly understand the optimizations mathemetically.
